@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="te">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL OMR Test</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anek+Telugu:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one Indian exam OMR answer sheet, a single narrow column with the bubble strip as progress. */
+:root {
+  --paper:#fdf1ee; --sheet:#fffaf8; --ink:#2a1b3d; --muted:#6f5a73;
+  --rule:#d9476b; --pen:#1f3fbf; --good:#11734b; --bad:#b3261e; --tint:#f9dfdf; --on-pen:#ffffff;
+  --telugu:"Anek Telugu","Noto Sans Telugu",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper:#1b1424; --sheet:#261c32; --ink:#f5ecf2; --muted:#bdaac2;
+  --rule:#f07a98; --pen:#9db2ff; --good:#62d6a2; --bad:#ff9a90; --tint:#3a2a44; --on-pen:#1b1424; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --paper:#1b1424; --sheet:#261c32; --ink:#f5ecf2; --muted:#bdaac2;
+  --rule:#f07a98; --pen:#9db2ff; --good:#62d6a2; --bad:#ff9a90; --tint:#3a2a44; --on-pen:#1b1424; color-scheme:dark }
+* { box-sizing:border-box }
+body { background:var(--paper); color:var(--ink); font-family:var(--telugu); font-size:17px; line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:20px 40px }
+main { max-width:620px; margin-inline:auto; display:grid; gap:18px }
+header { display:grid; gap:2px }
+.eyebrow { font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--rule) }
+h1 { font-size:clamp(28px,7vw,40px); line-height:1.2; margin:0; font-weight:800; text-wrap:balance }
+.sub { margin:0; color:var(--muted) }
+.strip { display:grid; grid-template-columns:repeat(10,1fr); gap:4px; border:1.5px solid var(--rule); padding:8px 6px; background:var(--sheet) }
+.tick { display:grid; justify-items:center; gap:2px; font-family:var(--mono); font-size:11px; color:var(--rule) }
+.tick i { width:16px; height:16px; border-radius:50%; border:1.5px solid var(--rule); display:block }
+.tick.now i { outline:2px solid var(--pen); outline-offset:1px }
+.tick.ok i { background:var(--good); border-color:var(--good) }
+.tick.no i { background:var(--bad); border-color:var(--bad) }
+.sheet { background:var(--sheet); border:1.5px solid var(--rule); padding:18px; display:grid; gap:14px; min-width:0 }
+.qhead { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-family:var(--mono); font-size:13px; color:var(--rule) }
+.prompt { font-size:20px; font-weight:700; line-height:1.45; margin:0 }
+pre { margin:0; font-family:var(--mono); font-size:14px; line-height:1.5; background:var(--tint); padding:12px; overflow-x:auto; color:var(--ink) }
+details summary { cursor:pointer; color:var(--pen); font-weight:500 }
+.tw { overflow-x:auto; margin-top:8px }
+table { border-collapse:collapse; font-family:var(--mono); font-size:13px; width:100%; font-variant-numeric:tabular-nums }
+th,td { border:1px solid var(--rule); padding:4px 8px; text-align:left }
+.opts { display:grid; gap:8px }
+.opt { display:flex; align-items:center; gap:12px; width:100%; min-height:48px; padding:8px 10px; background:transparent; color:var(--ink);
+  border:1px solid transparent; border-bottom-color:var(--rule); font:inherit; text-align:left; cursor:pointer }
+.opt:hover:not(:disabled) { background:var(--tint) }
+.opt:focus-visible,.btn:focus-visible,a:focus-visible,summary:focus-visible { outline:2px solid var(--pen); outline-offset:2px }
+.bub { flex:none; width:30px; height:30px; border-radius:50%; border:1.5px solid var(--rule); display:grid; place-items:center; font-family:var(--mono); font-size:13px; color:var(--rule) }
+.opt-t { min-width:0; font-family:var(--telugu) }
+.opt:disabled { cursor:default }
+.opt.right .bub { background:var(--good); border-color:var(--good); color:var(--on-pen) }
+.opt.wrong .bub { background:var(--bad); border-color:var(--bad); color:var(--on-pen) }
+.why { padding:12px; background:var(--tint); display:grid; gap:4px }
+.why b { color:var(--good) } .why.miss b { color:var(--bad) }
+.btn { display:inline-block; font:inherit; font-weight:700; padding:12px 18px; background:var(--pen); color:var(--on-pen); border:1.5px solid var(--pen); cursor:pointer; text-decoration:none; text-align:center }
+.btn.alt { background:transparent; color:var(--pen) }
+.actions { display:flex; flex-wrap:wrap; gap:10px } .actions .btn { flex:1 1 200px }
+.score { font-family:var(--mono); font-size:clamp(56px,18vw,88px); font-weight:600; line-height:1; color:var(--pen); font-variant-numeric:tabular-nums }
+.score small { font-size:.4em; color:var(--rule) }
+.level { font-size:22px; font-weight:700; margin:0 }
+.topics { display:grid; gap:6px; list-style:none; padding:0; margin:0 }
+.topics li { display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid var(--rule); padding-block:4px }
+.topics span:last-child { font-family:var(--mono); white-space:nowrap }
+.gap { color:var(--bad); font-weight:700 } .pass { color:var(--good); font-weight:700 }
+.offer { display:grid; gap:10px; border-top:2px dashed var(--rule); padding-top:14px }
+.offer h2 { margin:0; font-size:22px; line-height:1.3; text-wrap:balance }
+.offer p,.note { margin:0 }
+.note { font-size:14px; color:var(--muted) }
+footer { font-size:14px; color:var(--muted) }
+footer a { color:var(--pen) }
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <span class="eyebrow">Telugu SQL Interview Check</span>
+    <h1>SQL OMR టెస్ట్</h1>
+    <p class="sub">10 ప్రశ్నలు. సుమారు 5 నిమిషాలు. లాగిన్ అవసరం లేదు. మీ బలహీనమైన టాపిక్ వెంటనే తెలుస్తుంది.</p>
+  </header>
+  <div class="strip" id="strip" aria-label="Progress"></div>
+  <section class="sheet" id="sheet" aria-live="polite"></section>
+  <footer>
+    తయారు చేసినవారు: Dr. SVN Kumar. <a href="https://www.youtube.com/@Insightful_Bytes46">YouTube లో SQL for Jobs in Telugu చూడండి</a>.
+    ఇది ప్రాక్టీస్ టెస్ట్ మాత్రమే. ఉద్యోగానికి హామీ కాదు.
+  </footer>
+</main>
+
+<script>
+const APP_URL = "https://svn-kukmar.github.io/sql-test/";
+const TOPMATE = "https://topmate.io/svn_kumar/2390832";
+const DATA = [["1","Ravi","IT","60000","NULL"],["2","Sita","HR","45000","1"],["3","Kiran","IT","75000","1"],["4","Anu","Sales","45000","2"],["5","Teja","IT","NULL","3"],["6","Lata","Sales","50000","2"]];
+const Q = [
+ {t:"WHERE",p:"ఈ query ఎంత result ఇస్తుంది?",s:"SELECT COUNT(*)\nFROM employees\nWHERE salary > 45000;",o:["4","3","5","6"],a:1,w:"60000, 75000, 50000 మాత్రమే 45000 కంటే ఎక్కువ. Teja salary NULL కాబట్టి condition నిజం కాదు."},
+ {t:"NULL",p:"ఈ query ఎంత result ఇస్తుంది?",s:"SELECT COUNT(salary)\nFROM employees;",o:["6","0","5","Error"],a:2,w:"COUNT(column) NULL విలువలను లెక్కించదు. COUNT(*) అయితే 6 వచ్చేది."},
+ {t:"NULL",p:"ఈ query ఎన్ని rows ఇస్తుంది?",s:"SELECT name\nFROM employees\nWHERE salary = NULL;",o:["0 rows","1 row (Teja)","6 rows","Error"],a:0,w:"NULL ని = తో పోల్చితే నిజం రాదు. Teja రావాలంటే WHERE salary IS NULL రాయాలి."},
+ {t:"GROUP BY",p:"ఈ query ఎన్ని rows ఇస్తుంది?",s:"SELECT dept, COUNT(*)\nFROM employees\nGROUP BY dept\nHAVING COUNT(*) > 1;",o:["1","3","6","2"],a:3,w:"IT లో 3, Sales లో 2, HR లో 1 ఉన్నారు. HAVING వల్ల IT, Sales మాత్రమే మిగులుతాయి."},
+ {t:"GROUP BY",p:"Group చేసిన తర్వాత వచ్చిన results ను filter చేసే clause ఏది?",s:"",o:["WHERE","HAVING","ORDER BY","DISTINCT"],a:1,w:"WHERE grouping కి ముందు rows ను filter చేస్తుంది. HAVING grouping తర్వాత groups ను filter చేస్తుంది."},
+ {t:"Aggregates",p:"ఈ query ఎంత result ఇస్తుంది?",s:"SELECT AVG(salary)\nFROM employees\nWHERE dept = 'IT';",o:["45000","135000","67500","NULL"],a:2,w:"AVG కూడా NULL ను వదిలేస్తుంది. (60000 + 75000) / 2 = 67500. భాగహారం 3 తో కాదు."},
+ {t:"JOIN",p:"ఈ query ఎన్ని rows ఇస్తుంది?",s:"SELECT e.name, m.name\nFROM employees e\nJOIN employees m\n  ON e.manager_id = m.id;",o:["5","6","4","1"],a:0,w:"Ravi కి manager లేదు (NULL). INNER JOIN అతన్ని వదిలేస్తుంది. మిగిలిన 5 మందికి match ఉంది."},
+ {t:"JOIN",p:"INNER JOIN బదులు LEFT JOIN వాడితే ఎన్ని rows వస్తాయి?",s:"SELECT e.name, m.name\nFROM employees e\nLEFT JOIN employees m\n  ON e.manager_id = m.id;",o:["5","4","7","6"],a:3,w:"LEFT JOIN ఎడమ table లోని ప్రతి row ను ఉంచుతుంది. Ravi కూడా వస్తాడు, m.name మాత్రం NULL."},
+ {t:"Subquery",p:"ఈ query ఏ salary ఇస్తుంది?",s:"SELECT MAX(salary)\nFROM employees\nWHERE salary <\n  (SELECT MAX(salary) FROM employees);",o:["75000","60000","50000","45000"],a:1,w:"లోపలి query 75000 ఇస్తుంది. దాని కంటే తక్కువ వాటిలో గరిష్ఠం 60000. ఇదే second highest salary ప్రశ్న."},
+ {t:"Window",p:"ఈ query లో Lata కు ఏ rank వస్తుంది?",s:"SELECT name,\n  DENSE_RANK() OVER (ORDER BY salary) AS r\nFROM employees\nWHERE salary IS NOT NULL;",o:["1","3","2","4"],a:2,w:"Sita, Anu ఇద్దరూ 45000 తో rank 1. DENSE_RANK ఖాళీ వదలదు కాబట్టి Lata కు 2. RANK అయితే 3 వచ్చేది."}
+];
+let i = 0, picks = [];
+const sheet = document.getElementById("sheet"), strip = document.getElementById("strip");
+const L = "ABCD";
+const tableHtml = '<details id="tbl"><summary>employees table చూడండి</summary><div class="tw"><table><thead><tr><th>id</th><th>name</th><th>dept</th><th>salary</th><th>manager_id</th></tr></thead><tbody>'
+  + DATA.map(r => "<tr>" + r.map(c => "<td>" + c + "</td>").join("") + "</tr>").join("") + "</tbody></table></div></details>";
+
+function drawStrip(){
+  strip.innerHTML = Q.map((q,n) => {
+    const c = picks[n] === undefined ? (n === i ? "now" : "") : (picks[n] === q.a ? "ok" : "no");
+    return '<div class="tick ' + c + '"><i></i>' + (n+1) + "</div>";
+  }).join("");
+}
+function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function drawQ(){
+  const q = Q[i];
+  sheet.innerHTML = '<div class="qhead"><span>Q' + (i+1) + " / " + Q.length + "</span><span>" + q.t + "</span></div>"
+    + '<p class="prompt">' + q.p + "</p>" + (q.s ? "<pre>" + esc(q.s) + "</pre>" + tableHtml : "")
+    + '<div class="opts">' + q.o.map((t,n) => '<button class="opt" id="opt' + n + '" data-n="' + n + '"><span class="bub">' + L[n] + '</span><span class="opt-t">' + t + "</span></button>").join("") + "</div>"
+    + '<div id="after"></div>';
+  if (i === 0 && q.s) document.getElementById("tbl").open = true;
+  sheet.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => choose(+b.dataset.n)));
+  drawStrip();
+}
+function choose(n){
+  if (picks[i] !== undefined) return;
+  picks[i] = n;
+  const q = Q[i], ok = n === q.a;
+  sheet.querySelectorAll(".opt").forEach((b,k) => { b.disabled = true; if (k === q.a) b.classList.add("right"); else if (k === n) b.classList.add("wrong"); });
+  const last = i === Q.length - 1;
+  document.getElementById("after").innerHTML = '<div class="why ' + (ok ? "" : "miss") + '"><b>' + (ok ? "సరైన సమాధానం" : "సరైన సమాధానం: " + L[q.a]) + "</b><span>" + q.w + "</span></div>"
+    + '<div class="actions" style="margin-top:12px"><button class="btn" id="next">' + (last ? "నా ఫలితం చూపించు" : "తర్వాతి ప్రశ్న") + "</button></div>";
+  document.getElementById("next").addEventListener("click", () => { if (last) { i = Q.length; drawResult(); } else { i++; drawQ(); window.scrollTo(0,0); } });
+  drawStrip();
+}
+function drawResult(){
+  const score = picks.filter((p,n) => p === Q[n].a).length;
+  const tp = {};
+  Q.forEach((q,n) => { tp[q.t] = tp[q.t] || [0,0]; tp[q.t][1]++; if (picks[n] === q.a) tp[q.t][0]++; });
+  const weak = Object.keys(tp).filter(k => tp[k][0] < tp[k][1]);
+  const level = score >= 9 ? "మంచి పట్టు ఉంది. ఇప్పుడు టైమ్ పెట్టుకుని కఠినమైన problems ప్రాక్టీస్ చేయండి."
+    : score >= 6 ? "పునాది బాగుంది. కింద ఉన్న topics సరిచేయండి."
+    : "ముందు basics బలపరచుకోండి. కింద ఉన్న topics తో మొదలుపెట్టండి.";
+  const msg = "SQL OMR టెస్ట్‌లో నాకు " + score + "/10 వచ్చింది. మీకు ఎంత వస్తుందో చూడండి." + (APP_URL ? " " + APP_URL : "");
+  sheet.innerHTML = '<div class="qhead"><span>RESULT SHEET</span><span>' + (weak.length ? "Fix: " + weak.length : "All topics clear") + "</span></div>"
+    + '<div class="score">' + score + "<small>/10</small></div>"
+    + '<p class="level">' + level + "</p>"
+    + '<ul class="topics">' + Object.keys(tp).map(k => "<li><span>" + k + '</span><span class="' + (tp[k][0] < tp[k][1] ? "gap" : "pass") + '">' + tp[k][0] + "/" + tp[k][1] + "</span></li>").join("") + "</ul>"
+    + '<div class="actions"><a class="btn" href="https://wa.me/?text=' + encodeURIComponent(msg) + '">WhatsApp లో షేర్ చేయండి</a><button class="btn alt" id="copy">Message కాపీ చేయండి</button><button class="btn alt" id="again">మళ్లీ రాయండి</button></div>'
+    + '<p class="note" id="copied" hidden></p>'
+    + '<div class="offer"><h2>Interview ముందు మీ తప్పులు ఎక్కడో తెలుసుకోండి</h2>'
+    + "<p>" + (weak.length ? "మీ score ప్రకారం " + weak.join(", ") + " మీద దృష్టి పెట్టాలి. " : "") + "SQL Interview Practice Pack లో 50 problems, answers, practice database ఉన్నాయి.</p>"
+    + '<a class="btn" href="' + TOPMATE + '">₹99 Practice Pack చూడండి</a></div>';
+  document.getElementById("copy").addEventListener("click", () => {
+    const n = document.getElementById("copied"); n.hidden = false;
+    (navigator.clipboard ? navigator.clipboard.writeText(msg) : Promise.reject()).then(() => { n.textContent = "Message కాపీ అయింది."; }).catch(() => { n.textContent = msg; });
+  });
+  document.getElementById("again").addEventListener("click", () => { i = 0; picks = []; drawQ(); });
+  drawStrip();
+  window.scrollTo(0,0);
+}
+drawQ();
+</script>
+
+</body>
+</html>
